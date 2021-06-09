@@ -1,0 +1,7 @@
+miniwob/*
+*/__pycache__/*
+.history/
+compare/
+*.pyc
+*.log
+results/

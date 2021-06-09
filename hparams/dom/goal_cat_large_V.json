@@ -1,6 +1,6 @@
 {
-    "max_num_doms": 160,
-    "V_size": 200,
+    "max_num_doms": 1660,
+    "V_size": 1600,
     "goal_max_num_tokens": 18,
     "use_goal_attn": false,
     "use_goal_cat": true,

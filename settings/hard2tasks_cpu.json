@@ -8,6 +8,6 @@
     "multi_env": true,
     "T_replay_track": 200,
     "buffer_device": "cpu:0",
-    "batch_device": "cuda:0",
+    "batch_device": "cpu:0",
     "err_T_track": 100
 }
