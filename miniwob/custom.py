@@ -29,8 +29,8 @@ def convert_goal(goal):
     #res = res[1:]
     #if res[0] in transform_dict:
     #    res[0] = transform_dict[res[0]]
-    
-    #NOTE TODO PUT THIS BACK IF choose_date NOT WORKING 
+
+    #NOTE TODO PUT THIS BACK IF choose_date NOT WORKING
     if res[1] in transform_dict:
         res[1] = transform_dict[res[1]]
     return res
@@ -150,14 +150,14 @@ def get_or_na(dom, key):
         else:
             val = [0.0, 1.0]
         # TODO FIX SOLN for Environment Error for SUBMIT BUTTON, ALWAYS non-focused
-        if ("tag" in dom) and ("text" in dom): 
+        if ("tag" in dom) and ("text" in dom):
             if dom["tag"] == "BUTTON" and dom["text"] == "Submit":
                 val = [1.0, 0.0]
         elif dom["tag"] == "BODY":
             val = [1.0, 0.0]
     if key == "top":
         # val = [val/100.0]
-        val = [dom["ref"]/10.]
+        val = [dom["top"]/10.]
     return val
 
 

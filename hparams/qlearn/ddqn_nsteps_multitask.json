@@ -4,7 +4,7 @@
     "batch_size": 128,
     "gamma": 0.99,
     "T_tgt_update": 200,
-    "T_update": 20,
+    "T_update": 5,
     "max_step_per_epi": 22,
     "T_exploration": 50,
     "grad_clip": 2.5,

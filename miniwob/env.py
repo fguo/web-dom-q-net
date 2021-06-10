@@ -105,7 +105,7 @@ class MiniWoBEnvironment:
         if int(reward) == -1:
             reward = 0
         self._epi_reward += reward
-        item_tuple = (self._curr_doms, self._curr_goal, self._curr_leaves), reward, done, _ 
+        item_tuple = (self._curr_doms, self._curr_goal, self._curr_leaves), reward, done, _
         return item_tuple
 
     def _get_env_state(self):
@@ -128,6 +128,10 @@ class MiniWoBEnvironment:
 def flatten_dom(dom_elem, dom_list):
     dom_list.append(dom_elem)
     dom_elem_idx = dom_list.index(dom_elem)
+    if 'children' not in dom_elem.keys():
+        dom_elem["is_leaf"] = True
+        return
+
     dom_elem["is_leaf"] = (len(dom_elem["children"]) == 0)
     for i, child_elem in enumerate(dom_elem["children"]):
         dom_list[dom_elem_idx]["adj_V"].append(len(dom_list))
