@@ -33,7 +33,7 @@ class MiniWoBInstance:
 
     def __init__(
             self, task_file,
-            base_url= 'https://www.bing.com/',
+            base_url= 'https://www.github.com/',
             # base_url= 'http://127.0.0.1:8080/miniwob/book-flight.html', # os.getenv("WOB_PATH"),
             wait_ms=0., block_on_reset=True, refresh_freq=0
             ):
@@ -75,6 +75,7 @@ class MiniWoBInstance:
             'info': 'no reason'
         }
         self._current_url = ''
+        self._pre_dom_num = 0
 
     def __del__(self):
         print("Closing MiniWoB")
@@ -124,12 +125,15 @@ class MiniWoBInstance:
             'children': []
         }
         try:
-            mini_dom = self.get_dom()
-            self.save_dom(mini_dom)
+            web_dom = self.get_dom()
+            if web_dom is not None:
+                mini_dom = web_dom
             # print(mini_dom)
-        except  Exception as ex:
+        except Exception as ex:
             print(f'fail to get dom, error:{ex}')
         # print(mini_dom)
+        self.save_dom(mini_dom)
+        self._pre_dom_num = len(self._state.keys())
         return mini_dom
 
     @property
@@ -190,6 +194,7 @@ class MiniWoBInstance:
         chain.move_to_element_with_offset(body, left, top).click().perform()
 
     def dom_click(self, ref, fail_hard=False):
+        self._meta['raw_reward'] = 0
         if ref in self._state.keys():
             tree_element = self._state[ref]
         else:
@@ -213,7 +218,39 @@ class MiniWoBInstance:
         #     print(f'can not click the target element! err: {ex}')
 
         try:
-            result = self._driver.execute_script(
+            click_script = '''
+                window.canvasDrawElementClick = function (element) {
+                    // if (!window.prepareCanvas()) return;
+                    // var rect = element.getBoundingClientRect()
+                    // var ctx = core.clickTrackCtx;
+                    // ctx.fillStyle = "rgba(100, 100, 255, 0.8)";
+                    // ctx.fillRect(rect.left, rect.top, rect.width, rect.height);
+                }
+
+                window.elementClick = function (ref) {
+                    try {
+                        var element = window.previousDOMInfo[ref];
+                        window.canvasDrawElementClick(element);
+                        if (element instanceof SVGElement) {
+                            // SVG needs special treatment
+                            var event = new Event('mousedown');
+                            element.dispatchEvent(event);
+                            var event = new Event('mouseup');
+                            element.dispatchEvent(event);
+                            var event = new Event('click');
+                            element.dispatchEvent(event);
+                        } else {
+                            element.click();
+                            element.focus();
+                        }
+                        return true;
+                    } catch (err) {
+                        return err.message;
+                    }
+                }
+            '''
+            self._driver.execute_script(click_script)
+            self._driver.execute_script(
                     'return window.elementClick({});'.format(ref)
                     )
             if self._current_url != self._driver.current_url:
@@ -221,6 +258,10 @@ class MiniWoBInstance:
                 self._meta['raw_reward'] = 1
             else:
                 self._meta['raw_reward'] = 0
+
+                if self._pre_dom_num != len(self._state.keys()):
+                    self._meta['raw_reward'] = 1
+                    self._pre_dom_num = len(self._state.keys())
 
         except Exception as ex:
             print(f'fail to click element, error:{ex}')
@@ -245,6 +286,9 @@ class MiniWoBInstance:
         self.type(text)
 
     def save_dom(self, dom):
+        if 'ref' not in dom.keys():
+            return
+
         self._state[dom['ref']] = dom
 
         for child in dom['children']:
@@ -309,16 +353,16 @@ class MiniWoBInstance:
                     var element = window.previousDOMInfo[ref];
                     window.canvasDrawElementClick(element);
                     if (element instanceof SVGElement) {
-                    // SVG needs special treatment
-                    var event = new Event('mousedown');
-                    element.dispatchEvent(event);
-                    var event = new Event('mouseup');
-                    element.dispatchEvent(event);
-                    var event = new Event('click');
-                    element.dispatchEvent(event);
+                        // SVG needs special treatment
+                        var event = new Event('mousedown');
+                        element.dispatchEvent(event);
+                        var event = new Event('mouseup');
+                        element.dispatchEvent(event);
+                        var event = new Event('click');
+                        element.dispatchEvent(event);
                     } else {
-                    element.click();
-                    element.focus();
+                        element.click();
+                        element.focus();
                     }
                     return true;
                 } catch (err) {
@@ -329,12 +373,8 @@ class MiniWoBInstance:
             window.getDOMInfo = function (baseElement) {
 
                 function getDOMInfoOfElement(element) {
-                    if (element.id === 'reward-display' ||
-                        element.id === 'sync-task-cover' ||
-                        element.id === 'click-canvas' ||
-                        element.id === 'query') return;
                     var rect = element.getBoundingClientRect();
-                    if (rect.width == 0 || rect.height == 0) return;
+                    if (rect.width == 0 && rect.height == 0) return;
                     var answer = {
                         tag: element.tagName,
                         left: rect.left, top: rect.top,
@@ -383,7 +423,7 @@ class MiniWoBInstance:
                     window.previousDOMInfo[answer.ref] = element;
 
                     // Truncate too many dom nodes
-                    if (answer.ref > 1000) {
+                    if (answer.ref > 800) {
                         return answer;
                     }
 
@@ -477,11 +517,13 @@ class MiniWoBInstance:
 
         return self._driver.execute_script(dom_script)
 
+
 def clean_dom(dom_html):
     cleaner = Cleaner(style=True, links=True, add_nofollow=True,
                         page_structure=False, safe_attrs_only=False)
 
     return cleaner.clean_html(dom_html)
+
 
 def get_dom_of_element(elem):
     state_dom = dict()
@@ -508,7 +550,6 @@ def get_dom_of_element(elem):
         state_dom['children'].append(child_dom)
 
     return state_dom
-
 
 
 if __name__ == '__main__':
